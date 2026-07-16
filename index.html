@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMDATA — Sistem Informasi Data Scraping</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Bar aksen atas bergaya kop surat instansi resmi -->
+    <div class="gov-topbar"></div>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-chart-column"></i> <span>SIMDATA</span></h2>
+                <p class="sidebar-subtitle">Sistem Informasi Data Scraping</p>
+            </div>
+
+            <div class="menu-label">Kategori Data</div>
+            <!-- Daftar menu dirender otomatis oleh script.js dari database,
+                 dan bertambah sendiri setiap kali kategori baru diupload -->
+            <ul class="menu-list" id="menu-list"></ul>
+
+            <!-- Form untuk membuat menu kosong secara manual (opsional) -->
+            <div class="add-menu-row">
+                <input type="text" id="new-platform-input" placeholder="Buat menu kosong...">
+                <button id="btn-add-platform" title="Tambah Menu">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-header">
+                <span class="eyebrow"><i class="fa-solid fa-database"></i> Dashboard Monitoring Data</span>
+                <h1 id="active-menu-title">Data Scraping</h1>
+                <p>Kelola, kategorikan, dan analisis data hasil scraping Anda.</p>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="setup-section">
+                    <div class="setup-grid">
+                        <div class="url-input-container">
+                            <label for="category-input"><i class="fa-solid fa-folder-tree"></i> Kategori Data / Nama Menu</label>
+                            <input type="text" id="category-input" list="platform-suggestions" placeholder="Contoh: Tokopedia — atau ketik nama baru untuk membuat menu baru">
+                            <datalist id="platform-suggestions"></datalist>
+                            <span class="input-hint">Kategori baru akan otomatis menjadi menu baru di sidebar setelah data diunggah.</span>
+                        </div>
+                        <div class="url-input-container">
+                            <label for="target-url"><i class="fa-solid fa-link"></i> URL Target Scraping</label>
+                            <input type="text" id="target-url" placeholder="Masukkan URL toko atau pencarian di sini (Wajib)...">
+                        </div>
+                    </div>
+                    <div class="upload-container">
+                        <label for="excel-file" class="upload-area">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span id="upload-text">Tarik & lepas berkas Excel di sini<br>atau klik untuk memilih (bisa lebih dari satu berkas)</span>
+                            <input type="file" id="excel-file" accept=".xlsx, .xls" multiple>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="history-section" style="display: none; margin-bottom: 25px;">
+                    <h3 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Data Tersimpan</h3>
+                    <div id="history-list" class="history-list-container"></div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button class="btn-export" onclick="exportDatabase()"><i class="fa-solid fa-download"></i> Backup DB (.json)</button>
+                        <label class="btn-import">
+                            <i class="fa-solid fa-upload"></i> Restore DB
+                            <input type="file" id="import-db-file" accept=".json" style="display: none;">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="cards" id="dashboard-cards" style="display: none;">
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-table-list"></i></div>
+                        <div>
+                            <h3>Total Baris</h3>
+                            <p id="total-rows">0</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-table-columns"></i></div>
+                        <div>
+                            <h3>Total Kolom</h3>
+                            <p id="total-cols">0</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-file-excel"></i></div>
+                        <div>
+                            <h3>Status Data</h3>
+                            <p id="sheet-name" style="font-size: 14px; margin-top: 8px;">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container" id="table-section" style="display: none;">
+                    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0; margin-bottom: 15px;">
+                        <button id="action-open-url" class="btn-primary" style="display: none;">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Link Sumber
+                        </button>
+                        <div style="display: flex; gap: 10px; margin-left: auto;">
+                            <button id="btn-download-data" class="btn-success">
+                                <i class="fa-solid fa-file-arrow-down"></i> Download Excel Gabungan
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr id="table-head"></tr>
+                            </thead>
+                            <tbody id="table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
